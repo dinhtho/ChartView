@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <declare-styleable name="ExampleView" tools:ignore="ResourceName">
+        <attr name="app_color_paint" format="color" />
+        <attr name="app_manual_drawing" format="boolean" />
+        <attr name="app_stroke_width" format="dimension" />
+    </declare-styleable>
+</resources>
