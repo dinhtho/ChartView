@@ -4,11 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-  <com.example.pcpv.canvasdemo.ExampleView
-      app:app_color_paint="#000"
-      app:app_manual_drawing="true"
-      app:app_stroke_width="1dp"
-      android:layout_width="match_parent"
-      android:layout_height="match_parent" />
+    <com.example.pcpv.canvasdemo.chart.ChartView
+        android:layout_margin="20dp"
+        android:id="@+id/chart"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        app:app_color_paint="#000" />
 
 </LinearLayout>

@@ -1,3 +1,3 @@
-# Canvas Drawing
+# ChartView
 
-<img src="https://github.com/dinhtho/CanvasDemo/blob/master/image.png" width="500"/>
+<img src="https://github.com/dinhtho/ChartView/blob/master/image.png" width="500"/>
