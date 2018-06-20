@@ -7,17 +7,21 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.os.Build;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
 import com.example.pcpv.canvasdemo.R;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -28,10 +32,9 @@ public class ChartView extends View {
     private static final String TAG = "ExampleView";
     private Paint paint;
     private Path path;
-    private int colorPaint;
     private final int paddingBottom = 60;
     private final int paddingTop = 60;
-    private final int paddingLeft = 60;
+    private final int paddingLeft = 100;
     private int width;
     private int height;
     private List<ChartData> chartDataList;
@@ -39,40 +42,27 @@ public class ChartView extends View {
     private Point selectedPoint;
     private int spaceXAxis = 165;
     private int spaceYAxis = 90;
-    private int rowVariableUnit = 1;
-    private int columnVariableUnit = 500;
-    private int begunRowVariable = 0;
-    private int begunColumnVariable = 0;
+    private float rowVariableUnit = -1;
+    private float columnVariableUnit = -1;
     private final Rect textBounds = new Rect();
     private boolean isOriginCoordinateBottom = true;
+    private int numberOfRow;
+    private int numberOfColumn;
+    private ChartListener chartListener;
 
-
-    public ChartView(Context context) {
-        super(context);
-    }
-
-    public ChartView(Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs);
-        init(context, attrs);
+    public ChartView(Context context, AttributeSet attributeSet) {
+        super(context, attributeSet);
+        initPaint();
     }
 
     private void initPaint() {
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(colorPaint);
+        paint.setColor(Color.BLACK);
         paint.setStyle(Paint.Style.STROKE);
     }
 
-    private void init(Context context, AttributeSet attrs) {
-        TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.ChartView);
-        colorPaint = ta.getColor(R.styleable.ChartView_app_color_paint, Color.BLUE);
-    }
-
-    public void setBegunRowVariable(int begunRowVariable) {
-        this.begunRowVariable = begunRowVariable;
-    }
-
-    public void setBegunColumnVariable(int begunColumnVariable) {
-        this.begunColumnVariable = begunColumnVariable;
+    public void setChartListener(ChartListener chartListener) {
+        this.chartListener = chartListener;
     }
 
     public void setRowVariableUnit(int rowVariableUnit) {
@@ -97,14 +87,23 @@ public class ChartView extends View {
 
     public void setChartDataList(List<ChartData> chartDataList) {
         this.chartDataList = chartDataList;
-        this.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                createPoints();
-                createNewPath();
-                postInvalidate();
-            }
+        this.postDelayed(() -> {
+            initDataGraph();
+            createPoints();
+            createNewPath();
+            postInvalidate();
         }, 200);
+    }
+
+    private void initDataGraph() {
+        numberOfRow = (height - paddingTop - paddingBottom) / spaceYAxis + 1;
+        numberOfColumn = (width - paddingLeft) / spaceXAxis + 1;
+        if (columnVariableUnit <= 0) {
+            columnVariableUnit = Math.abs(getMaxYData().getY() - getMinYData().getY()) / (numberOfRow - 1);
+        }
+        if (rowVariableUnit <= 0) {
+            rowVariableUnit = Math.abs(getMaxXData().getX() - getMinXData().getX()) / (numberOfColumn - 1);
+        }
     }
 
     private void createPoints() {
@@ -139,6 +138,7 @@ public class ChartView extends View {
         }
         if (selectedPoint != null) {
             drawSelectedPoint(canvas);
+//            zoom(1.5f, 1.5f, selectedPoint);
         }
     }
 
@@ -147,6 +147,13 @@ public class ChartView extends View {
         paint.setColor(Color.RED);
         canvas.drawPath(path, paint);
 
+    }
+
+    public void zoom(Float scaleX, Float scaleY, Point point) {
+        this.setPivotX(point.x);
+        this.setPivotY(point.y);
+        this.setScaleX(scaleX);
+        this.setScaleY(scaleY);
     }
 
     private void drawSelectedPoint(Canvas canvas) {
@@ -163,9 +170,8 @@ public class ChartView extends View {
     }
 
     private void drawColumns(Canvas canvas) {
-        int numberOfColumn = (width - paddingLeft) / spaceXAxis + 1;
         for (int i = 0; i < numberOfColumn; i++) {
-            drawTextCentred(canvas, paint, String.valueOf(begunRowVariable + rowVariableUnit * i),
+            drawTextCentred(canvas, paint, String.valueOf(rowVariableUnit * i),
                     paddingLeft + spaceXAxis * i, height - paddingBottom / 2);
             canvas.drawLine(paddingLeft + spaceXAxis * i, height - paddingBottom,
                     paddingLeft + spaceXAxis * i, paddingTop, paint);
@@ -173,10 +179,9 @@ public class ChartView extends View {
     }
 
     private void drawRows(Canvas canvas) {
-        int numberOfRow = (height - paddingTop - paddingBottom) / spaceYAxis + 1;
         paint.setTextAlign(Paint.Align.RIGHT);
         for (int i = 0; i < numberOfRow; i++) {
-            String text = String.valueOf(begunColumnVariable + columnVariableUnit * i);
+            String text = String.valueOf(columnVariableUnit * i);
             paint.getTextBounds(text, 0, text.length(), textBounds);
             int y = isOriginCoordinateBottom ? (height - paddingBottom) - spaceYAxis * i :
                     spaceYAxis * i + paddingTop;
@@ -208,8 +213,8 @@ public class ChartView extends View {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             selectedPoint = getPointFromTough(pointX);
             if (selectedPoint != null) {
-                // Force a view to draw again
                 postInvalidate();
+                chartListener.onClick(chartDataList.get(points.indexOf(selectedPoint)));
             }
         }
         return true;
@@ -226,5 +231,49 @@ public class ChartView extends View {
             }
         }
         return null;
+    }
+
+    private ChartData getMaxYData() {
+        ChartData maxYData = chartDataList.get(0);
+        for (ChartData data : chartDataList) {
+            if (maxYData.getY() < data.getY()) {
+                maxYData = data;
+            }
+        }
+        return maxYData;
+    }
+
+    private ChartData getMinYData() {
+        ChartData minYData = chartDataList.get(0);
+        for (ChartData data : chartDataList) {
+            if (minYData.getY() > data.getY()) {
+                minYData = data;
+            }
+        }
+        return minYData;
+    }
+
+    private ChartData getMaxXData() {
+        ChartData maxXData = chartDataList.get(0);
+        for (ChartData data : chartDataList) {
+            if (maxXData.getX() < data.getX()) {
+                maxXData = data;
+            }
+        }
+        return maxXData;
+    }
+
+    private ChartData getMinXData() {
+        ChartData minXData = chartDataList.get(0);
+        for (ChartData data : chartDataList) {
+            if (minXData.getX() > data.getX()) {
+                minXData = data;
+            }
+        }
+        return minXData;
+    }
+
+    public interface ChartListener {
+        void onClick(ChartData chartData);
     }
 }

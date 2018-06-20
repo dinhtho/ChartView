@@ -2,13 +2,13 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
+    android:background="#0e4168"
     android:layout_height="match_parent">
 
     <com.example.pcpv.canvasdemo.chart.ChartView
         android:layout_margin="20dp"
         android:id="@+id/chart"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
-        app:app_color_paint="#000" />
+        android:layout_height="300dp" />
 
 </LinearLayout>
